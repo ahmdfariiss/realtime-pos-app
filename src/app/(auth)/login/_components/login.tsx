@@ -1,5 +1,6 @@
 'use client';
 
+import FormInput from '@/components/common/form-input';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -8,78 +9,76 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Form } from '@/components/ui/form';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { INITIAL_LOGIN_FORM } from '@/constants/auth-constant';
-import { LoginForm, loginSchema } from '@/validations/auth-validation';
+  INITIAL_LOGIN_FORM,
+  INITIAL_STATE_LOGIN_FORM,
+} from '@/constants/auth-constant';
+import { LoginForm, loginSchemaForm } from '@/validations/auth-validation';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { startTransition, useActionState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { login } from '../actions';
+import { Loader2 } from 'lucide-react';
 
 export default function Login() {
   const form = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema), //resolver diambil dari login schema
+    resolver: zodResolver(loginSchemaForm),
     defaultValues: INITIAL_LOGIN_FORM,
-  }); //tipe dari usForm diambil dari auth-validation
+  });
+
+  const [loginState, loginAction, isPendingLogin] = useActionState(
+    login,
+    INITIAL_STATE_LOGIN_FORM,
+  );
 
   const onSubmit = form.handleSubmit(async (data) => {
-    console.log(data);
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      formData.append(key, value);
+    });
+
+    startTransition(() => {
+      loginAction(formData);
+    });
   });
+
+  useEffect(() => {
+    if (loginState?.status === 'error') {
+      startTransition(() => {
+        loginAction(null);
+      });
+    }
+  }, [loginState, loginAction]);
+
+  console.log(loginState);
 
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">Selamat Datang</CardTitle>
-        <CardDescription>Silahkan login untuk akses web</CardDescription>
+        <CardTitle className="text-xl">Welcome</CardTitle>
+        <CardDescription>Login to access all features</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          {' '}
-          {/* props untuk Form diambil dari form */}
-          <form action="" onSubmit={onSubmit} className="space-y-4">
-            <FormField
-              control={form.control}
+          <form onSubmit={onSubmit} className="space-y-4">
+            <FormInput
+              form={form}
               name="email"
-              render={({ field: { ...rest } }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...rest}
-                      type="email"
-                      placeholder="Silahkan masukan email..."
-                      autoComplete="off"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            ></FormField>
-            <FormField
-              control={form.control}
+              label="Email"
+              placeholder="Insert email here"
+              type="email"
+            />
+            <FormInput
+              form={form}
               name="password"
-              render={({ field: { ...rest } }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...rest}
-                      type="password"
-                      placeholder="Masukan Password"
-                      autoComplete="off"
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            ></FormField>
-            <Button type="submit">Login</Button>
+              label="Password"
+              placeholder="******"
+              type="password"
+            />
+            <Button type="submit">
+              {isPendingLogin ? <Loader2 className="animate-spin" /> : 'Login'}
+            </Button>
           </form>
         </Form>
       </CardContent>
